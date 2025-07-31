@@ -1,0 +1,10 @@
+pub const NFTA_TABLE_NAME: u16 = 0x1;
+pub const NFTA_SET_TABLE: u16 = 0x1;
+pub const NFTA_SET_NAME: u16 = 0x2;
+pub const NFTA_SET_ELEM_KEY: u16 = 0x1;
+pub const NFTA_SET_ELEM_LIST_TABLE: u16 = 0x1;
+pub const NFTA_SET_ELEM_LIST_SET: u16 = 0x2;
+pub const NFTA_SET_ELEM_LIST_ELEMENTS: u16 = 0x3;
+pub const NFTA_SET_ELEM_LIST_SET_ID: u16 = 0x4;
+pub const NFTA_DATA_VALUE: u16 = 0x1;
+pub const NLA_F_NESTED: u16 = 0x8000;

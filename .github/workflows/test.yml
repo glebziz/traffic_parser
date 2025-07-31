@@ -1,0 +1,44 @@
+name: test
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache debs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install libpcap-dev
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          components: llvm-tools-preview
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          toolchain: nightly
+          args: cargo-llvm-cov
+
+      - name: Cargo test
+        run: cargo llvm-cov --lcov --ignore-filename-regex "main.rs|app.rs|config.rs|http.rs|nft" --output-path coverage.lcov
+
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage.lcov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

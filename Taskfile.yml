@@ -1,0 +1,21 @@
+version: '3'
+
+tasks:
+  clean:
+    cmd: rm -r ./target
+
+  build:
+    cmds:
+      - cargo build
+
+  build-release:
+    cmds:
+      - cargo build --release
+
+  lint:
+    cmds:
+      - cargo fmt
+      - cargo clippy --all-targets -- -D warnings
+
+  test:
+    cmd: cargo test

@@ -1,0 +1,13 @@
+table:
+  name: fw
+  family: inet
+  detector_set: detector
+  detector_v6_set: detector_v6
+capture:
+  interface: eth01
+  filter: tcp
+  capture_size: 2048
+  timeout: 1s
+detector:
+  detector_count: 5
+  conn_ttl: 30s
