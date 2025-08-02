@@ -12,6 +12,8 @@ pub struct Config {
     pub detector: Detector,
     #[serde(default)]
     pub debug: Debug,
+    #[serde(default = "Config::default_domains_file")]
+    pub domains_file: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -20,10 +22,14 @@ pub struct Table {
     pub name: String,
     #[serde(default = "Table::default_family")]
     pub family: String,
-    #[serde(default = "Table::default_set")]
+    #[serde(default = "Table::default_detector_set")]
     pub detector_set: String,
-    #[serde(default = "Table::default_v6_set")]
+    #[serde(default = "Table::default_detector_v6_set")]
     pub detector_v6_set: String,
+    #[serde(default = "Table::default_watcher_set")]
+    pub watcher_set: String,
+    #[serde(default = "Table::default_watcher_v6_set")]
+    pub watcher_v6_set: String,
 }
 
 impl Default for Table {
@@ -31,8 +37,10 @@ impl Default for Table {
         Table {
             name: Self::default_name(),
             family: Self::default_family(),
-            detector_set: Self::default_set(),
-            detector_v6_set: Self::default_v6_set(),
+            detector_set: Self::default_detector_set(),
+            detector_v6_set: Self::default_detector_v6_set(),
+            watcher_set: Self::default_watcher_set(),
+            watcher_v6_set: Self::default_watcher_v6_set(),
         }
     }
 }
@@ -46,12 +54,20 @@ impl Table {
         "inet".to_string()
     }
 
-    fn default_set() -> String {
+    fn default_detector_set() -> String {
         "detector".to_string()
     }
 
-    fn default_v6_set() -> String {
+    fn default_detector_v6_set() -> String {
         "detector_v6".to_string()
+    }
+
+    fn default_watcher_set() -> String {
+        "watcher".to_string()
+    }
+
+    fn default_watcher_v6_set() -> String {
+        "watcher_v6".to_string()
     }
 }
 
@@ -159,5 +175,9 @@ impl Config {
             Ok(cfg) => Ok(cfg),
             Err(err) => Err(Error::External(err.to_string())),
         }
+    }
+
+    fn default_domains_file() -> String {
+        "domains.txt".to_string()
     }
 }

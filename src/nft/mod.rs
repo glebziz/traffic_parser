@@ -4,7 +4,8 @@ mod constants;
 mod ipset;
 mod table;
 
-use crate::detector::IpSetAdder;
+use crate::detector;
+use crate::domain_watcher;
 use crate::errors::Error;
 use crate::nft::constants::*;
 pub use crate::nft::ipset::IpSet;
@@ -235,13 +236,23 @@ impl Connection {
         msg.header.length = msg.buffer_len() as u32;
         msg
     }
-}
 
-impl IpSetAdder for Connection {
     fn add_ip(&self, table: &Table, ipset: &IpSet, ip: &IpAddr) -> Result<(), Error> {
         match self.send_batch(vec![self.add_ip_message(table, ipset, ip)]) {
             Ok(_) => Ok(()),
             Err(err) => Err(err),
         }
+    }
+}
+
+impl detector::IpSetAdder for Connection {
+    fn add_ip(&self, table: &Table, ipset: &IpSet, ip: &IpAddr) -> Result<(), Error> {
+        self.add_ip(table, ipset, ip)
+    }
+}
+
+impl domain_watcher::IpSetAdder for Connection {
+    fn add_ip(&self, table: &Table, ipset: &IpSet, ip: &IpAddr) -> Result<(), Error> {
+        self.add_ip(table, ipset, ip)
     }
 }

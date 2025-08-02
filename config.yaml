@@ -3,11 +3,14 @@ table:
   family: inet
   detector_set: detector
   detector_v6_set: detector_v6
+  watcher_set: watcher
+  watcher_v6_set: watcher_v6
 capture:
-  interface: eth01
+  interface: eth0
   filter: tcp
   capture_size: 2048
   timeout: 1s
 detector:
   detector_count: 5
   conn_ttl: 30s
+domains_file: domains.txt

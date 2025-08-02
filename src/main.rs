@@ -5,6 +5,7 @@ mod app;
 mod config;
 mod connection;
 mod detector;
+mod domain_watcher;
 mod errors;
 mod http;
 mod interface;

@@ -24,7 +24,7 @@ pub trait IpSetAdder {
     fn add_ip(&self, table: &Table, ipset: &IpSet, ip: &IpAddr) -> Result<(), Error>;
 }
 
-pub struct Detector<IPAT, CTT, F>
+pub struct Detector<'a, IPAT, CTT, F>
 where
     IPAT: IpSetAdder,
     CTT: ConnTrack,
@@ -33,14 +33,14 @@ where
     cfg: config::Detector,
 
     conn_track: Arc<CTT>,
-    ip_adder: IPAT,
+    ip_adder: &'a IPAT,
     is_local: F,
-    table: Table,
-    v4: IpSet,
-    v6: IpSet,
+    table: &'a Table,
+    v4: &'a IpSet,
+    v6: &'a IpSet,
 }
 
-impl<IPAT, CTT, F> Detector<IPAT, CTT, F>
+impl<'a, IPAT, CTT, F> Detector<'a, IPAT, CTT, F>
 where
     IPAT: IpSetAdder,
     CTT: ConnTrack,
@@ -48,13 +48,13 @@ where
 {
     pub fn new(
         cfg: config::Detector,
-        ip_adder: IPAT,
+        ip_adder: &'a IPAT,
         conn_track: Arc<CTT>,
         is_local: F,
-        table: Table,
-        v4: IpSet,
-        v6: IpSet,
-    ) -> Detector<IPAT, CTT, F> {
+        table: &'a Table,
+        v4: &'a IpSet,
+        v6: &'a IpSet,
+    ) -> Detector<'a, IPAT, CTT, F> {
         Detector {
             cfg,
             conn_track,
@@ -112,11 +112,11 @@ where
 
     fn add_ip(&self, ip: &IpAddr) {
         let set = match ip {
-            IpAddr::V4(_) => &self.v4,
-            IpAddr::V6(_) => &self.v6,
+            IpAddr::V4(_) => self.v4,
+            IpAddr::V6(_) => self.v6,
         };
 
-        match self.ip_adder.add_ip(&self.table, set, ip) {
+        match self.ip_adder.add_ip(self.table, set, ip) {
             Ok(_) => {
                 debug!("Add IP: {ip:?}");
             }
@@ -143,7 +143,7 @@ where
     }
 }
 
-impl<IPAT, CTT, F> PacketProcessor for Detector<IPAT, CTT, F>
+impl<'a, IPAT, CTT, F> PacketProcessor for Detector<'a, IPAT, CTT, F>
 where
     IPAT: IpSetAdder,
     CTT: ConnTrack,
@@ -190,14 +190,19 @@ test_cases!(process_ip => vars{
         })
     })
 ] => |tc: TestCase| {
+    let table = Table::new("table".to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new("ipset".to_string());
+    let ipset_v6 = IpSet::new("ipset_v6".to_string());
+    let ip_adder = MockIpSetAdder::new();
+
     let d = Detector::new(
         config::Detector::default(),
-        MockIpSetAdder::new(),
+        &ip_adder,
         Arc::new(tc.conn_track),
         |_| true,
-        Table::new("table".to_string(), TABLE_FAMILY_INET),
-        IpSet::new("ipset".to_string()),
-        IpSet::new("ipset_v6".to_string())
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     d.process_ip(&IpPacket{
@@ -299,14 +304,18 @@ test_cases!(process_tcp => vars{
         payload: TcpPayload::Other(vec![]),
     }),
 ] => |tc: TestCase| {
+    let table = Table::new("table".to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new("ipset".to_string());
+    let ipset_v6 = IpSet::new("ipset_v6".to_string());
+
     let d = Detector::new(
         config::Detector::default(),
-        tc.ip_adder,
+        &tc.ip_adder,
         Arc::new(tc.conn_track),
         |_| true,
-        Table::new("table".to_string(), TABLE_FAMILY_INET),
-        IpSet::new("ipset".to_string()),
-        IpSet::new("ipset_v6".to_string())
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     d.process_tcp(&IpPacket{
@@ -408,17 +417,21 @@ test_cases!(process_tls => vars{
         tls_pkt: TlsPacket::ServerHandshake,
     }),
 ] => |tc: TestCase| {
+    let table = Table::new("table".to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new("ipset".to_string());
+    let ipset_v6 = IpSet::new("ipset_v6".to_string());
+
     let d = Detector::new(
         config::Detector{
             detector_count: 0,
             ..config::Detector::default()
         },
-        tc.ip_adder,
+        &tc.ip_adder,
         Arc::new(tc.conn_track),
         |_| true,
-        Table::new("table".to_string(), TABLE_FAMILY_INET),
-        IpSet::new("ipset".to_string()),
-        IpSet::new("ipset_v6".to_string())
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     d.process_tls(&IpPacket{
@@ -498,14 +511,18 @@ test_cases!(add_ip => vars{
         ip: IP,
     })
 ] => |tc: TestCase| {
+    let table = Table::new(TABLE.to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new(IPSET.to_string());
+    let ipset_v6 = IpSet::new(IPSET_V6.to_string());
+
     let d = Detector::new(
         config::Detector::default(),
-        tc.ip_adder,
+        &tc.ip_adder,
         Arc::new(MockConnTrack::new()),
         |_| true,
-        Table::new(TABLE.to_string(), TABLE_FAMILY),
-        IpSet::new(IPSET.to_string()),
-        IpSet::new(IPSET_V6.to_string()),
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     d.add_ip(&tc.ip);
@@ -548,14 +565,19 @@ test_cases!(conn_key => vars{
         }
     })
 ] => |tc: TestCase| {
+    let table = Table::new("table".to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new("ipset".to_string());
+    let ipset_v6 = IpSet::new("ipset_v6".to_string());
+    let ip_adder = MockIpSetAdder::new();
+
     let d = Detector::new(
         config::Detector::default(),
-        MockIpSetAdder::new(),
+        &ip_adder,
         Arc::new(MockConnTrack::new()),
         tc.is_local,
-        Table::new("table".to_string(), TABLE_FAMILY_INET),
-        IpSet::new("ipset".to_string()),
-        IpSet::new("ipset_v6".to_string())
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     let conn_key = d.conn_key(&IpPacket{
@@ -596,17 +618,22 @@ test_cases!(process => vars{
         }
     })
 ] => |tc: TestCase| {
+    let table = Table::new("table".to_string(), TABLE_FAMILY_INET);
+    let ipset = IpSet::new("ipset".to_string());
+    let ipset_v6 = IpSet::new("ipset_v6".to_string());
+    let ip_adder = MockIpSetAdder::new();
+
     let d = Detector::new(
         config::Detector{
             conn_ttl: TTL,
             ..config::Detector::default()
         },
-        MockIpSetAdder::new(),
+        &ip_adder,
         Arc::new(tc.conn_track),
         |_| true,
-        Table::new("table".to_string(), TABLE_FAMILY_INET),
-        IpSet::new("ipset".to_string()),
-        IpSet::new("ipset_v6".to_string())
+        &table,
+        &ipset,
+        &ipset_v6,
     );
 
     d.process(&Packet::Ip(IpPacket{
